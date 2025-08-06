@@ -1,0 +1,152 @@
+ecommerce_platform:
+  name: ShopVerse
+  version: 2.1.0
+  features:
+    - catalog
+    - cart
+    - checkout
+    - payment
+    - user_profiles
+    - order_tracking
+
+database:
+  host: localhost
+  port: "5432"
+  username: admin
+  password: securepass123
+  dbname: shopverse_db
+  pool:
+    max_connections: 20
+    min_connections: 5
+    timeout: 3000
+
+api_keys:
+  google_maps: "AIzaSyD6..."
+  sendgrid: "SG.p4s1..."
+  stripe:
+    public_key: pk_live_12345
+    secret_key: sk_live_54321
+  twilio:
+    sid: AC1234567890
+    auth_token: abc123def456
+  features:
+    enable_sms: true
+    enable_email: true
+    enable_map_location: true
+
+services:
+  payment_gateway:
+    provider: Stripe
+    retries: 3
+    currency: USD
+    allowed_methods:
+      - credit_card
+      - paypal
+      - apple_pay
+      - googlepay
+  shipping:
+    enabled: true
+    providers:
+      - name: UPS
+        zones:
+          - US
+          - CA
+      - name: FedEx
+        zones: ["EU", "ASIA"]
+        default_zone: "EU"
+      - name: DHL
+        zone: ALL
+  inventory_sync:
+    schedule: "0 */6 * * *"
+    timeout_seconds: 90
+    retry_attempts: 5
+
+ui_config:
+  theme: dark
+  default_language: en
+  supported_languages:
+    - en
+    - fr
+    - de
+    - es
+  banners:
+    enabled: yes
+    rotation_interval: "5s"
+    images:
+      - /assets/banner1.jpg
+      - /assets/banner2.jpg
+      - /assets/banner3.jpg
+  widgets:
+    - name: Recommendations
+      position: sidebar
+    - name: RecentlyViewed
+      position: footer
+
+logging:
+  level: info
+  output:
+    file: logs/platform.log
+    stdout: true
+    format: json
+
+notifications:
+  email:
+    enabled: true
+    default_sender: support@shopverse.com
+    smtp:
+      host: smtp.mailgun.org
+      port: 587
+      use_tls: true
+      username: shopverse
+      password: pass1234
+  sms:
+    enabled: true
+    default_sender: +15551234567
+
+security:
+  cors:
+    allowed_origins:
+      - https://shopverse.com
+      - http://localhost:3000
+    allow_credentials: true
+    max_age: 600
+  rate_limit:
+    enabled: true
+    requests_per_minute: 120
+
+# Custom tags for dynamic rendering
+metadata:
+  created_by: admin
+  created_on: 2025-08-01
+  tags:
+    - production
+    - beta
+    - release_candidate
+
+users:
+  - id: 1
+    username: jdoe
+    email: jdoe@example.com
+    roles:
+      - admin
+      - editor
+    last_login: 2025-07-30T10:15:00Z
+  - id: 2
+    username: asmith
+    email: asmith@example.com
+    roles: viewer
+    last_login: 2025-08-01T14:02:15Z
+  - id: 3
+    username: blake92
+    email: blake92@sample.net
+    roles:
+      - editor
+    last_login: 2025-08-02T07:48:01Z
+
+maintenance:
+  mode: false
+  scheduled:
+    start: 2025-08-10T01:00:00Z
+    end: 2025-08-10T04:00:00Z
+  message: "We'll be back shortly!"
+
