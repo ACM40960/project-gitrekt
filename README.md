@@ -7,7 +7,7 @@ We present an automated SQL correction system leveraging the n8n orchestration p
 
 Here’s the n8n workflow used for the SQL repair process:
 
-![Workflow Overview](assets/images/queries/workflow.jpeg)
+![Workflow Overview](assets/images/queries/workflow.png)
 ---
 
 ## Motivation
