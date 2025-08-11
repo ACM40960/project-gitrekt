@@ -1,4 +1,4 @@
-# AI-Powered SQL Corrector: Automated Query Repair with n8n & Google Gemini
+# n8n Workflow: Automated SQL Query Repair
 
 ## Abstract
 This project implements an **automated SQL query correction system** using the **n8n** orchestration platform and **Google Gemini AI**.  
