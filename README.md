@@ -3,6 +3,11 @@
 ## Abstract
 We present an automated SQL correction system leveraging the n8n orchestration platform and Google Gemini AI. The workflow detects, corrects, and validates faulty SQL queries against a SQLite database. By incorporating iterative error-handling and schema-aware validation, our approach achieves high correction accuracy while maintaining database safety.
 
+## Workflow Overview
+
+Here’s the n8n workflow used for the SQL repair process:
+
+![Workflow Overview](assets/images/queries/workflow.jpeg)
 ---
 
 ## Motivation
