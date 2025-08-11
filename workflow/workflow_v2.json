@@ -1,0 +1,788 @@
+{
+  "name": "My workflow 9",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        336
+      ],
+      "id": "805c49ec-e347-409c-9f89-2fd37d3c9d77",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/files/chinook.db",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        0,
+        240
+      ],
+      "id": "c6221fd6-fbb9-4ae1-ac3b-740e961ce3f7",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are correcting SQL for the SQLite Chinook database.\n\nRequirements:\n1. Output ONLY the corrected SQL query.\n2. Do NOT include explanations, comments, markdown, or any other text.\n3. The first non-whitespace character in your response must be SELECT.\n4. The SQL must run successfully on the SQLite Chinook schema.\n\nSQL to fix:\nSELECT TrackTitle, ArtistName FROM Songs;\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        720
+      ],
+      "id": "a816e5a5-2693-4165-8aa9-4fbfdccb3732",
+      "name": "AI Agent",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "command": "=sqlite3 /files/chinook.db \"BEGIN; {{ (() => {\n  const raw = ($node['AI Agent'].json.output || '').toString();\n  const cleaned = raw\n    .replace(/```/g,'')\n    .replace(/^sql\\s*/i,'')\n    .replace(/^=/,'')\n    .trim();\n  const m = cleaned.match(/SELECT[\\s\\S]*?;/i);\n  const sql = m ? m[0] : (cleaned.endsWith(';') ? cleaned : cleaned + ';');\n  return sql;\n})() }} ROLLBACK;\"\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        864,
+        592
+      ],
+      "id": "2166c14e-bdeb-4f9e-af29-f81e6f7abafb",
+      "name": "Execute Command",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        288,
+        912
+      ],
+      "id": "d974f56d-0579-4058-9ddc-16e166dc0e15",
+      "name": "First Correction Attempt with Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EmX6mNKOXNs2okuW",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "58a4f23f-9508-4798-b017-e02d25577377",
+              "leftValue": "={{$json.exitCode}}\n",
+              "rightValue": "0",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        560
+      ],
+      "id": "d491748a-efdb-43e2-b974-5ca3915f9754",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=The last attempt to correct this SQL failed with the following error from the database:\n{{$json.error}}\n\nRequirements:\n1. Output ONLY the corrected SQL query.\n2. Do NOT include explanations, comments, markdown, or any other text.\n3. The first non-whitespace character in your response must be SELECT.\n4. The SQL must run successfully on the SQLite Chinook schema.\n\nOriginal SQL to fix:\n{{$json.output}}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        3136,
+        192
+      ],
+      "id": "020f5e57-a90f-4614-a6d3-68a8955d0ac5",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3008,
+        464
+      ],
+      "id": "1ce05426-6221-4148-ab3d-60b7ef758c8f",
+      "name": "Re-Fix with Error",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EmX6mNKOXNs2okuW",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2512,
+        160
+      ],
+      "id": "7599540a-141a-40e1-863e-64ad210a413c",
+      "name": "Merge"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2032,
+        656
+      ],
+      "id": "007bc215-f3f9-42b3-b89f-981c585b1b23",
+      "name": "Wait",
+      "webhookId": "5f9c92a2-a47d-491d-b123-4f326f064995"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/corrected_and_approved.sql",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        2624,
+        656
+      ],
+      "id": "81de5b15-c153-40a7-8d44-a6285c71daa8",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a senior database administrator reviewing the final corrected SQL query.\n\nFirst, output the SQL query exactly as provided below (no markdown, no extra formatting, exactly as it should run).\nThen, provide a brief, bullet-point summary describing what it does and any important design choices or optimisations you notice.\n\nCorrected SQL:\n{{$json.corrected_sql}}\n\nFormat:\n1. SQL (exact, no markdown fences)\n2. Summary (bullet points)\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        3520,
+        832
+      ],
+      "id": "31d0c5be-e3b4-4bed-9689-e0151a0511ef",
+      "name": "AI Agent2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2880,
+        832
+      ],
+      "id": "b64c649e-ad51-4641-98b5-8b12d1f9c81e",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3520,
+        992
+      ],
+      "id": "c3f54d36-bea5-4cff-8e78-a5551ed5aa78",
+      "name": "Generate Change Summary",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EmX6mNKOXNs2okuW",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9171e6a8-c93c-4064-af1a-251fb7c5ec42",
+              "name": "attempt",
+              "value": "={{ $json.attempt + 1 }}\n",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1568,
+        464
+      ],
+      "id": "bd884ff7-5cfa-41cf-9f41-6235cc3e6107",
+      "name": "Attempt++"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa696e05-1514-4496-b4f7-f68bb8ae6ccb",
+              "leftValue": "={{$json.attempt}}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1792,
+        464
+      ],
+      "id": "5541f9a7-b22b-4388-898b-2e5b7f8a64fa",
+      "name": "Max Tries?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "15d8e5f8-c988-4efc-b3bc-bad7ed668867",
+              "name": "sql",
+              "value": "={{$json.agent_output || $json.output || ''}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2240,
+        656
+      ],
+      "id": "9d968258-66a5-4044-b605-6c0e777b6e95",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "sql",
+        "options": {
+          "fileName": "corrected_and_approved.sql"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2448,
+        656
+      ],
+      "id": "c561acc7-0565-457f-b712-d4b2be7e2030",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "20bf9849-41ea-4b95-94f7-412ef2dd324c",
+              "name": "error",
+              "value": "={{$items(\"Execute Command\")[0]?.json?.error || \"\"}}\n",
+              "type": "string"
+            },
+            {
+              "id": "43ec0ae3-ba64-438c-9987-b300daba98cd",
+              "name": "output",
+              "value": "={{$items(\"AI Agent\")[0]?.json?.output || \"\"}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2720,
+        160
+      ],
+      "id": "3f1b5305-b797-4e80-9c1e-20a7576f5005",
+      "name": "Gather Inputs"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3c63ef28-bc3f-49ed-8a26-d0da67addcce",
+              "name": "sql",
+              "value": "={{ ($json.output || '')\n   .toString()\n   .replace(/```/g,'')\n   .replace(/^sql\\s*/i,'')\n   .replace(/^=/,'')\n   .trim()\n   .match(/SELECT[\\s\\S]*?;/i)?.[0] || '' }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1504,
+        656
+      ],
+      "id": "84394abf-9563-4eb0-b4e8-e41c11c0579e",
+      "name": "Pick SQL (no error)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "56363117-05e8-4aa9-87c9-42832a78416c",
+              "name": "attempt",
+              "value": "={{ $('attempt').item.json.attempt }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        464
+      ],
+      "id": "2d1e2fc9-1e9e-4338-a8dc-fd4f5203ddb1",
+      "name": "Pick SQL (error)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "10986229-a7ce-4603-a430-61dd09f3a19a",
+              "name": "agent_output",
+              "value": "={{$json.output}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3488,
+        192
+      ],
+      "id": "533b3d95-8bca-477c-afbd-bae05ea9274b",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f75d28d0-19bb-4b9a-b38c-a8d1f3b0ab03",
+              "name": "corrected_sql",
+              "value": "=corrected_sql → {{$items(\"Merge1\")[1].json.output}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3280,
+        832
+      ],
+      "id": "b56d854c-cd36-46b5-8196-b3b9c96f0b14",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const merged = $items(\"Merge1\");\n\n// Find whichever merge item actually has SQL text\nconst found = merged.find(it => it.json && typeof it.json.output === 'string' && it.json.output.trim().startsWith(\"SELECT\"));\n\nreturn [\n  {\n    json: {\n      corrected_sql: found\n        ? found.json.output\n            .replace(/```/g, '')\n            .replace(/^sql\\s*/i, '')\n            .trim()\n        : ''\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3088,
+        832
+      ],
+      "id": "645831a3-1eda-4c5e-93a1-5684570703f8",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "adcf6a77-0828-4047-afb7-520ebfc4acc9",
+              "name": "attempt",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -608,
+        336
+      ],
+      "id": "055c9cb0-333d-4fd5-950c-50138a71a8a6",
+      "name": "attempt"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First Correction Attempt with Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Pick SQL (error)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pick SQL (no error)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-Fix with Error": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Gather Inputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Change Summary": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attempt++": {
+      "main": [
+        [
+          {
+            "node": "Max Tries?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Max Tries?": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gather Inputs": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick SQL (no error)": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick SQL (error)": {
+      "main": [
+        [
+          {
+            "node": "Attempt++",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "attempt": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "db550663-7dff-4839-9e24-6cdd6f0d5494",
+  "meta": {
+    "instanceId": "ed241df626917b03a4afe677ce62becb18f4b2df36a8db0d5abf50282da10aff"
+  },
+  "id": "HZJ0RY661pMC9P1S",
+  "tags": []
+}
